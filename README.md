@@ -1,5 +1,5 @@
 # datalog-influx
-Push FRC WPILib datalogs into InfluxDB
+Push FRC WPILib datalogs into InfluxDB 2.
 
 ## Installation
 
