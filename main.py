@@ -2,6 +2,7 @@
 
 import configparser
 import mmap
+from operator import truediv
 import sys
 from datetime import datetime
 
@@ -114,19 +115,19 @@ def main():
                         value = record.getBoolean()
                         #print(f"  {record.getBoolean()}")
                     elif entry.type == "boolean[]":
-                        arr = record.getBooleanArray()
+                        value = record.getBooleanArray()
                         #print(f"  {arr}")
                     elif entry.type == "double[]":
-                        arr = record.getDoubleArray()
+                        value = record.getDoubleArray().tolist()
                         #print(f"  {arr}")
                     elif entry.type == "float[]":
-                        arr = record.getFloatArray()
+                        value = record.getFloatArray().tolist()
                         #print(f"  {arr}")
                     elif entry.type == "int64[]":
-                        arr = record.getIntegerArray()
+                        value = record.getIntegerArray().tolist()
                         #print(f"  {arr}")
                     elif entry.type == "string[]":
-                        arr = record.getStringArray()
+                        value = record.getStringArray()
                         #print(f"  {arr}")
 
                     if value is None:
@@ -136,19 +137,32 @@ def main():
                     elif baseTime is not None:
                         t = int(baseTime + timestamp)
 
-                        if p is None:
-                            p = Point("robot").time(t, write_precision=WritePrecision.MS)
-                        p.field(entry.name, value)
-                        # print(datetime.fromtimestamp(t/1000).isoformat(" "))
+                        if isinstance(value, list):
+                            listMode = True
+                        else:
+                            listMode = False
+                            value = [value]
+                        
+                        for index, v in enumerate(value):
+                            if p is None:
+                                p = Point("robot").time(t, write_precision=WritePrecision.MS)
 
-                        if t != prevTime:
-                            batch.append(p)
-                            prevTime = t
-                            p = None
+                            if listMode:
+                                name = f"{entry.name}/{index}"
+                            else:
+                                name = entry.name
+                            
+                            p.field(name, v)
+                            # print(datetime.fromtimestamp(t/1000).isoformat(" "))
 
-                        if len(batch) == BATCH_SIZE:
-                            write_api.write(bucket=bucket, record=batch)
-                            batch = []
+                            if t != prevTime:
+                                batch.append(p)
+                                prevTime = t
+                                p = None
+
+                            if len(batch) == BATCH_SIZE:
+                                write_api.write(bucket=bucket, record=batch)
+                                batch = []
 
                 except TypeError as e:
                     print("  invalid")
