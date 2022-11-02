@@ -44,6 +44,7 @@ def main():
         entries = {}
         baseTime = None
         prevTime = None
+        p = None
         batch = []
 
         for record in reader:
@@ -135,16 +136,26 @@ def main():
                     elif baseTime is not None:
                         t = int(baseTime + timestamp)
 
-                        if prevTime is not None and t != prevTime and batch:
+                        if p is None:
+                            p = Point("robot").time(t, write_precision=WritePrecision.MS)
+                        p.field(entry.name, value)
+                        # print(datetime.fromtimestamp(t/1000).isoformat(" "))
+
+                        if t != prevTime:
+                            batch.append(p)
+                            prevTime = t
+                            p = None
+
+                        if len(batch) == BATCH_SIZE:
                             write_api.write(bucket=bucket, record=batch)
                             batch = []
-                            prevTime = t
-
-                        p = Point(entry.name).time(t, write_precision=WritePrecision.MS).field("_value", value)
-                        batch.append(p)
 
                 except TypeError as e:
                     print("  invalid")
+        if p:
+            batch.append(p)
+            p = None
+        
         if batch:
             write_api.write(bucket=bucket, record=batch)
             batch = []
